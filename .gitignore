@@ -1,0 +1,18 @@
+# Ne jamais envoyer la base de données
+db.sqlite3
+
+# Ne jamais envoyer les fichiers générés automatiquement
+__pycache__/
+*.pyc
+
+# Environnement virtuel
+venv/
+
+# Dossier créé automatiquement par collectstatic
+staticfiles/
+
+# Dossier pour tes fichiers static personnalisés
+static/
+
+# Fichiers système Windows
+Thumbs.db

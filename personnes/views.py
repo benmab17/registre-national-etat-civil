@@ -1,8 +1,61 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth import login, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import AuthenticationForm
+
 from .forms import NaissanceForm, RecherchePersonneForm
 from .models import Personne, ActeNaissance
 
 
+def login_view(request):
+    """
+    Page de connexion pour les agents de l'état civil et l'admin.
+    """
+    if request.user.is_authenticated:
+        return redirect("dashboard")
+
+    message = None
+    if request.method == "POST":
+        form = AuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
+            login(request, user)
+            return redirect("dashboard")
+        else:
+            message = "Identifiants incorrects. Veuillez réessayer."
+    else:
+        form = AuthenticationForm(request)
+
+    contexte = {
+        "form": form,
+        "message": message,
+    }
+    return render(request, "login.html", contexte)
+
+
+@login_required
+def logout_view(request):
+    """
+    Déconnexion simple, retour à la page de login.
+    """
+    logout(request)
+    return redirect("login")
+
+
+@login_required
+def dashboard(request):
+    """
+    Tableau de bord principal après connexion.
+    """
+    user = request.user
+    contexte = {
+        "user": user,
+        "is_admin": user.is_staff or user.is_superuser,
+    }
+    return render(request, "dashboard.html", contexte)
+
+
+@login_required
 def nouvelle_naissance(request):
     """
     Page pour que l'officier encode une nouvelle naissance.
@@ -15,7 +68,6 @@ def nouvelle_naissance(request):
             # Création automatique de l'acte de naissance associé
             acte = ActeNaissance.objects.create(
                 personne=personne,
-                # Tu pourras plus tard rendre ces champs dynamiques
                 lieu_etablissement="Commune de Démonstration",
                 officier="Officier de l'état civil (démo)",
             )
@@ -27,6 +79,7 @@ def nouvelle_naissance(request):
     return render(request, "naissance_form.html", {"form": form})
 
 
+@login_required
 def recherche_citoyen(request):
     """
     Recherche d'un citoyen par numéro national, nom, postnom, prénom, date de naissance.
@@ -63,15 +116,17 @@ def recherche_citoyen(request):
     return render(request, "recherche_citoyen.html", contexte)
 
 
+@login_required
 def detail_citoyen(request, personne_id):
     """
     Affiche la fiche détaillée d'un citoyen.
     """
     personne = get_object_or_404(Personne, id=personne_id)
-    acte = getattr(personne, "acte_naissance", None)  # peut être None si pas encore créé
+    acte = getattr(personne, "acte_naissance", None)
     return render(request, "citoyen_detail.html", {"personne": personne, "acte": acte})
 
 
+@login_required
 def acte_naissance_view(request, personne_id):
     """
     Affiche l'acte de naissance officiel (version imprimable / PDF via impression navigateur).
@@ -83,4 +138,3 @@ def acte_naissance_view(request, personne_id):
         "acte": acte,
     }
     return render(request, "acte_naissance.html", contexte)
-
