@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout, login
 from django.contrib.auth.forms import AuthenticationForm
 
-from .forms import NaissanceForm, RecherchePersonneForm, AdulteForm
+from .forms import PersonneForm, RecherchePersonneForm
 from .models import Personne, ActeNaissance
 from .audit import log_audit
 
@@ -17,18 +17,23 @@ def dashboard(request):
 def nouvelle_naissance(request):
     """
     Enregistrement d'une nouvelle naissance
-    → crée Personne + ActeNaissance automatiquement
+    → crée Personne (type_enregistrement=NAISSANCE) + ActeNaissance NORMAL automatiquement
     """
     if request.method == "POST":
-        form = NaissanceForm(request.POST)
+        form = PersonneForm(request.POST)
         if form.is_valid():
-            personne = form.save()
+            personne = form.save(commit=False)
+            personne.type_enregistrement = "NAISSANCE"
+            personne.save()
 
-            acte = ActeNaissance.objects.create(
+            # Créer l'acte NORMAL (évite doublon si déjà existant)
+            acte, created = ActeNaissance.objects.get_or_create(
                 personne=personne,
-                lieu_etablissement="Commune de Démonstration",
-                officier="Officier de l'état civil (démo)",
-                type_acte="NORMAL",
+                defaults={
+                    "lieu_etablissement": "Commune de Démonstration",
+                    "officier": "Officier de l'état civil (démo)",
+                    "type_acte": "NORMAL",
+                },
             )
 
             # Journal d'audit
@@ -46,7 +51,7 @@ def nouvelle_naissance(request):
                 {"personne": personne, "acte": acte},
             )
     else:
-        form = NaissanceForm()
+        form = PersonneForm()
 
     return render(request, "naissance_form.html", {"form": form})
 
@@ -55,10 +60,10 @@ def nouvelle_naissance(request):
 def nouvel_adulte(request):
     """
     Enregistrement d'un adulte (recensement)
-    → crée Personne sans acte
+    → crée Personne (type_enregistrement=ADULTE) sans acte automatique
     """
     if request.method == "POST":
-        form = AdulteForm(request.POST)
+        form = PersonneForm(request.POST)
         if form.is_valid():
             personne = form.save(commit=False)
             personne.type_enregistrement = "ADULTE"
@@ -74,7 +79,7 @@ def nouvel_adulte(request):
 
             return redirect("detail_citoyen", personne_id=personne.id)
     else:
-        form = AdulteForm()
+        form = PersonneForm()
 
     return render(request, "adulte_form.html", {"form": form})
 
@@ -162,10 +167,11 @@ def detail_citoyen(request, personne_id):
 @login_required
 def acte_naissance_view(request, personne_id):
     """
-    Affiche l'acte de naissance officiel (version imprimable / PDF via impression navigateur).
+    Affiche l'acte de naissance officiel.
     """
     personne = get_object_or_404(Personne, id=personne_id)
     acte = get_object_or_404(ActeNaissance, personne=personne)
+
     contexte = {
         "personne": personne,
         "acte": acte,
@@ -211,6 +217,7 @@ def login_view(request):
         form = AuthenticationForm(request)
 
     return render(request, "login.html", {"form": form})
+
 
 def logout_view(request):
     logout(request)
