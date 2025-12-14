@@ -1,4 +1,4 @@
-# Django / Python
+# Python
 __pycache__/
 *.pyc
 *.pyo
@@ -8,14 +8,10 @@ __pycache__/
 venv/
 .env
 
-# Base de données locale
+# Django
 db.sqlite3
-
-# Fichiers statiques collectés
 staticfiles/
-
-# Logs
-*.log
+media/
 
 # OS
 .DS_Store
