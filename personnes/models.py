@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 from django.utils import timezone
 
 
@@ -8,8 +9,19 @@ class Personne(models.Model):
         ('F', 'Féminin'),
     ]
 
+    TYPE_ENREGISTREMENT_CHOICES = [
+        ('NAISSANCE', 'Enregistrement Naissance'),
+        ('ADULTE', 'Enregistrement Adulte'),
+    ]
+
     # Exemple : 251209001-14
-    numero_national = models.CharField(max_length=12, unique=True, blank=True)
+    numero_national = models.CharField(max_length=11, unique=True, blank=True)
+    type_enregistrement = models.CharField(
+        max_length=10,
+        choices=TYPE_ENREGISTREMENT_CHOICES,
+        default='NAISSANCE',
+        verbose_name="Type d'enregistrement"
+    )
 
     nom = models.CharField(max_length=100)
     postnom = models.CharField(max_length=100, blank=True)
@@ -40,7 +52,7 @@ class Personne(models.Model):
 
     def generer_numero_national(self):
         """
-        Génère un numéro du type AAMMJJOOO-CC :
+        Génère un numéro du type AAMMJJOOOCC :
         - AA = 2 derniers chiffres de l'année
         - MM = mois
         - JJ = jour
@@ -67,16 +79,23 @@ class Personne(models.Model):
             cc_val = 0
         cc = f"{cc_val:02d}"
 
-        # Final : AAMMJJOOO-CC
-        return f"{date_part}{ooo}-{cc}"
+        # Final : AAMMJJOOOCC
+        return f"{date_part}{ooo}{cc}"
 
 
 class ActeNaissance(models.Model):
-    """
-    Acte de naissance officiel lié à une Personne.
-    Un acte par personne.
-    """
+    TYPE_ACTE_CHOICES = [
+        ('NORMAL', 'Naissance déclarée'),
+        ('TARDIF', 'Acte établi après recensement adulte'),
+    ]
+
     personne = models.OneToOneField(Personne, on_delete=models.CASCADE, related_name="acte_naissance")
+    type_acte = models.CharField(
+        max_length=10,
+        choices=TYPE_ACTE_CHOICES,
+        default='NORMAL',
+        verbose_name="Type d'acte"
+    )
     numero_acte = models.CharField(max_length=20, unique=True, blank=True)
     date_etablissement = models.DateField(auto_now_add=True)
     lieu_etablissement = models.CharField(max_length=150, default="Commune de Démonstration")
@@ -99,3 +118,25 @@ class ActeNaissance(models.Model):
         annee = timezone.now().year
         count_year = ActeNaissance.objects.filter(date_etablissement__year=annee).count() + 1
         return f"AN-{annee}-{count_year:05d}"
+
+
+class JournalAudit(models.Model):
+    created_at = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    action = models.CharField(max_length=50)
+    personne = models.ForeignKey('Personne', null=True, blank=True, on_delete=models.SET_NULL)
+    acte = models.ForeignKey('ActeNaissance', null=True, blank=True, on_delete=models.SET_NULL)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True, default="")
+    details = models.TextField(blank=True, default="")
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Journal d'Audit"
+        verbose_name_plural = "Journaux d'Audit"
+
+    def __str__(self):
+        user_info = self.user.username if self.user else "Anonyme"
+        personne_info = self.personne.id if self.personne else "N/A"
+        acte_info = self.acte.id if self.acte else "N/A"
+        return f"[{self.created_at.strftime('%Y-%m-%d %H:%M')}] {user_info} - {self.action} (Personne: {personne_info}, Acte: {acte_info})"

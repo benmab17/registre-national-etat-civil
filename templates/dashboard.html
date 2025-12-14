@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Tableau de bord – Registre national</title>
+
+    <!-- On peut utiliser Bootstrap juste pour la grille & les boutons -->
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+        crossorigin="anonymous"
+    >
+
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: #020617; /* gris très sombre */
+            color: #e5e7eb;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        /* Bande bleue du haut */
+        .app-topbar {
+            background: #0b3ba8;
+            color: #f9fafb;
+            padding: 10px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 15px;
+        }
+
+        .topbar-title {
+            font-weight: 600;
+        }
+
+        .topbar-right small {
+            opacity: 0.9;
+        }
+
+        .logout-link {
+            color: #ffeb3b;
+            font-weight: 600;
+            text-decoration: none;
+            margin-left: 14px;
+        }
+
+        .logout-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Conteneur principal */
+        .app-shell {
+            max-width: 1200px;
+            margin: 32px auto 40px auto;
+            padding-inline: 16px;
+        }
+
+        .dashboard-wrapper {
+            background: radial-gradient(circle at top, #111827 0, #020617 55%);
+            border-radius: 24px;
+            box-shadow: 0 22px 55px rgba(0,0,0,0.7);
+            border: 1px solid rgba(148,163,184,0.35);
+            overflow: hidden;
+        }
+
+        .dashboard-header {
+            padding: 24px 28px 18px 28px;
+            border-bottom: 1px solid rgba(55,65,81,0.7);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .dashboard-header h1 {
+            margin: 0;
+            font-size: 26px;
+            color: #f9fafb;
+        }
+
+        .dashboard-header small {
+            color: #9ca3af;
+        }
+
+        .profile-label {
+            font-size: 13px;
+            color: #9ca3af;
+            text-align: right;
+        }
+
+        .profile-badge {
+            display: inline-block;
+            margin-top: 2px;
+            font-size: 12px;
+            padding: 2px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(248,250,252,0.3);
+            color: #e5e7eb;
+        }
+
+        /* Cartes */
+        .dashboard-body {
+            padding: 24px 28px 26px 28px;
+        }
+
+        .module-card {
+            background: rgba(15,23,42,0.95);
+            border-radius: 18px;
+            border: 1px solid rgba(75,85,99,0.7);
+            padding: 20px 22px;
+            height: 100%;
+            transition: all 0.18s ease-out;
+        }
+
+        .module-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 18px 40px rgba(0,0,0,0.75);
+            border-color: #3b82f6;
+        }
+
+        .module-title {
+            font-size: 15px;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: #9ca3af;
+            margin-bottom: 6px;
+        }
+
+        .module-heading {
+            font-size: 18px;
+            font-weight: 600;
+            color: #f9fafb;
+            margin-bottom: 8px;
+        }
+
+        .module-text {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #d1d5db; /* texte clair => bien lisible */
+            margin-bottom: 14px;
+        }
+
+        .module-footer {
+            font-size: 12px;
+            color: #9ca3af;
+        }
+
+        .btn-module {
+            border-radius: 999px;
+            padding-inline: 16px;
+            padding-block: 6px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .app-footer {
+            padding: 10px 24px 14px;
+            font-size: 12px;
+            color: #9ca3af;
+            border-top: 1px solid rgba(55,65,81,0.7);
+            background: #020617;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Bande bleue du haut -->
+<div class="app-topbar">
+    <div class="topbar-title">
+        RDC – Registre national de l'état civil
+    </div>
+    <div class="topbar-right">
+        <small>Connecté en tant que <strong>{{ user.username }}</strong></small>
+        <a href="{% url 'logout' %}" class="logout-link">Déconnexion</a>
+    </div>
+</div>
+
+<div class="app-shell">
+    <div class="dashboard-wrapper">
+
+        <!-- En-tête du tableau de bord -->
+        <div class="dashboard-header">
+            <div>
+                <h1>Portail des opérations d'état civil</h1>
+                <small>Naissances – Adultes – gestion des citoyens – actes officiels</small>
+            </div>
+            <div class="profile-label">
+                Profil :
+                {% if user.is_staff or user.is_superuser %}
+                    <div class="profile-badge">Administrateur</div>
+                {% else %}
+                    <div class="profile-badge">Officier de l'état civil</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Corps du tableau de bord -->
+        <div class="dashboard-body">
+            <div class="row g-4">
+
+                <!-- Carte Naissances -->
+                <div class="col-md-6">
+                    <div class="module-card">
+                        <div class="module-title">Naissances</div>
+                        <div class="module-heading">Enregistrer une nouvelle naissance</div>
+                        <p class="module-text">
+                            Accéder au formulaire complet d’enregistrement : identité de l’enfant, parents,
+                            adresse, numéro national généré automatiquement et création de l’acte de naissance.
+                        </p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="module-footer">Accès employés & administrateurs</span>
+                            <a href="{% url 'nouvelle_naissance' %}" class="btn btn-primary btn-module">
+                                Ouvrir le formulaire
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Carte Adultes (Recensement) -->
+                <div class="col-md-6">
+                    <div class="module-card">
+                        <div class="module-title">Recensement</div>
+                        <div class="module-heading">Enregistrer un adulte</div>
+                        <p class="module-text">
+                            Enregistrer un citoyen adulte (sans acte de naissance). Le système génère automatiquement
+                            le numéro national et crée une fiche citoyenne pour le recensement et la base nationale.
+                        </p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="module-footer">Accès employés & administrateurs</span>
+                            <a href="{% url 'nouvel_adulte' %}" class="btn btn-primary btn-module">
+                                Ouvrir le formulaire
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Carte Recherche -->
+                <div class="col-md-6">
+                    <div class="module-card">
+                        <div class="module-title">Base de données</div>
+                        <div class="module-heading">Rechercher un citoyen</div>
+                        <p class="module-text">
+                            Rechercher un citoyen par numéro national, nom, postnom, prénom ou date de naissance.
+                            Accéder ensuite à la fiche détaillée et aux actes associés pour vérification ou impression.
+                        </p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="module-footer">Accès employés & administrateurs</span>
+                            <a href="{% url 'recherche_citoyen' %}" class="btn btn-outline-light btn-module">
+                                Ouvrir la recherche
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Carte Statistiques -->
+                <div class="col-md-6">
+                    <div class="module-card">
+                        <div class="module-title">Données</div>
+                        <div class="module-heading">Statistiques nationales</div>
+                        <p class="module-text">
+                            Consulter les chiffres clés du registre national : total de citoyens,
+                            naissances, adultes, actes de naissance normaux et tardifs.
+                        </p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="module-footer">Accès employés & administrateurs</span>
+                            <a href="{% url 'stats' %}" class="btn btn-outline-light btn-module">
+                                Voir les statistiques
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Carte Administration -->
+                {% if user.is_staff or user.is_superuser %}
+		<!-- Carte Administration -->
+		<div class="col-md-12">
+   		   <div class="module-card">
+        	     <div class="module-title">Administration</div>
+        	     <div class="module-heading">Panneau d'administration Django</div>
+        	     <p class="module-text">
+            		Gérer les utilisateurs, les droits d’accès et consulter les données des personnes via
+            		l’interface d’administration. Permet une supervision avancée du registre national.
+        	     </p>
+        	     <div class="d-flex justify-content-between align-items-center">
+           	 	<span class="module-footer">Réservé aux administrateurs</span>
+            		<a href="/admin/" class="btn btn-secondary btn-module">
+                	    Ouvrir l'administration
+            		</a>
+        	     </div>
+    		   </div>
+		</div>
+		{% endif %}
+
+        <!-- Pied -->
+        <div class="app-footer">
+            Registre national de l'état civil – Prototype de démonstration (Naissances & Adultes)
+        </div>
+
+    </div>
+</div>
+
+</body>
+</html>
